@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="lv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Skrienam</title>
+<meta name="description" content="Kurš ko skrien šonedēļ.">
+<meta name="theme-color" content="#EFF1F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1113" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Skrienam">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&family=Fira+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#EFF1F2; --surface:#FFFFFF; --surface-2:#F6F8F8;
+  --ink:#15181A; --ink-2:#343A3E; --muted:#616970; --faint:#8D959B;
+  --line:#DCE0E3; --line-2:#C3C9CE;
+  --accent:#9E3039; --accent-ink:#FFFFFF; --accent-soft:#F7E5E6;
+  --ok:#1E7A45; --ok-ink:#FFFFFF; --danger:#A61B1B; --danger-ink:#FFFFFF;
+  --scrim:rgba(20,25,28,.42);
+  --shadow:0 1px 2px rgba(20,25,28,.05),0 10px 24px -16px rgba(20,25,28,.35);
+  --sans:"Fira Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  --mono:"Fira Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --logo-filter:none;
+  --top:env(safe-area-inset-top,0px);
+  --bot:env(safe-area-inset-bottom,0px);
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0F1113; --surface:#191D20; --surface-2:#202528;
+  --ink:#E7EAEC; --ink-2:#C2C8CC; --muted:#8A9197; --faint:#6A7178;
+  --line:#293034; --line-2:#3A4248;
+  --accent:#E4636D; --accent-ink:#1B0508; --accent-soft:#2D1519;
+  --ok:#4ADE80; --ok-ink:#06210F; --danger:#F87171; --danger-ink:#2A0607;
+  --scrim:rgba(0,0,0,.6); --logo-filter:invert(1);
+  --shadow:0 1px 2px rgba(0,0,0,.45),0 10px 24px -16px rgba(0,0,0,.9);
+}}
+:root[data-theme="dark"]{
+  --bg:#0F1113; --surface:#191D20; --surface-2:#202528;
+  --ink:#E7EAEC; --ink-2:#C2C8CC; --muted:#8A9197; --faint:#6A7178;
+  --line:#293034; --line-2:#3A4248;
+  --accent:#E4636D; --accent-ink:#1B0508; --accent-soft:#2D1519;
+  --ok:#4ADE80; --ok-ink:#06210F; --danger:#F87171; --danger-ink:#2A0607;
+  --scrim:rgba(0,0,0,.6); --logo-filter:invert(1);
+  --shadow:0 1px 2px rgba(0,0,0,.45),0 10px 24px -16px rgba(0,0,0,.9);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+h1,h2,h3{margin:0;letter-spacing:-.02em;line-height:1.22;text-wrap:balance}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+img{max-width:100%}
+[hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ---------- shell ---------- */
+.shell{min-height:100%;display:flex;flex-direction:column;max-width:560px;margin:0 auto;
+  background:var(--bg);position:relative}
+.bar{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);
+  padding-top:var(--top)}
+.bar-in{display:flex;align-items:center;gap:11px;padding:12px 16px}
+.clublogo{width:34px;height:34px;flex:none;display:block;filter:var(--logo-filter)}
+.lockup-rule{flex:none;width:1px;height:22px;background:var(--line-2);border-radius:1px}
+.brand{font-size:19px;font-weight:700;letter-spacing:-.035em;margin-right:auto}
+.brand em{font-style:normal;color:var(--accent)}
+.you{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;
+  padding:5px 12px 5px 5px;background:var(--surface);max-width:170px;min-height:34px}
+.you .av{width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);
+  display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+.you .nm{font-size:13.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+main{flex:1;padding:18px 16px calc(96px + var(--bot))}
+.kicker{font-size:14px;color:var(--muted);margin-bottom:16px}
+
+/* ---------- run card ---------- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;
+  padding:14px 15px 13px;margin-bottom:12px;box-shadow:var(--shadow);scroll-margin-top:90px}
+.card.flash{animation:flash 2.2s ease-out}
+@keyframes flash{0%,55%{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}100%{}}
+.c-top{display:flex;align-items:baseline;gap:10px}
+.c-day{font-family:var(--mono);font-size:11.5px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);flex:1;min-width:0}
+.c-time{font-family:var(--mono);font-size:20px;font-weight:700;letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums;flex:none}
+.c-kur{font-size:16.5px;font-weight:600;line-height:1.3;margin-top:5px;overflow-wrap:anywhere}
+.c-nums{display:flex;align-items:baseline;gap:9px;margin-top:6px;font-family:var(--mono);font-size:13.5px;
+  font-variant-numeric:tabular-nums;color:var(--ink-2);flex-wrap:wrap}
+.c-nums .sep{color:var(--line-2)}
+.c-nums .u{color:var(--faint);font-size:12px}
+.c-by{font-family:var(--mono);font-size:11px;letter-spacing:.05em;color:var(--faint);margin-top:9px}
+.c-foot{margin-top:11px;padding-top:12px;border-top:1px solid var(--line)}
+.c-who{font-size:13.5px;color:var(--muted);line-height:1.4;margin-bottom:11px}
+.c-who b{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--ink-2);margin-right:7px}
+.c-who .names{overflow-wrap:anywhere}
+.c-who .me{color:var(--accent);font-weight:600}
+.c-acts{display:flex;gap:9px;align-items:stretch}
+.act{flex:none;border-radius:10px;min-height:46px;display:grid;place-items:center}
+.join{flex:1;background:var(--accent);color:var(--accent-ink);border:1px solid transparent;
+  padding:0 16px;font-size:15px;font-weight:600;white-space:nowrap}
+.join.out{background:transparent;color:var(--muted);border-color:var(--line-2);font-weight:500}
+.iconbtn{width:46px;border:1px solid var(--line);background:var(--surface-2);color:var(--muted)}
+.iconbtn.del{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 30%,transparent)}
+
+/* ---------- states ---------- */
+.empty{text-align:center;padding:52px 22px;border:1px dashed var(--line-2);border-radius:14px;color:var(--muted)}
+.empty b{display:block;font-size:17px;font-weight:600;color:var(--ink);margin-bottom:6px}
+.empty span{font-size:14.5px;display:block;max-width:34ch;margin-inline:auto}
+.skel{height:132px;border-radius:14px;background:var(--surface);border:1px solid var(--line);
+  margin-bottom:12px;opacity:.6;animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.3}}
+.warn{display:flex;gap:10px;background:var(--surface);border:1px solid var(--line);
+  border-left:3px solid var(--accent);border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:14px;color:var(--muted)}
+.warn b{color:var(--ink);font-weight:600}
+.warn button{background:none;border:none;color:var(--accent);font-weight:600;padding:0;text-decoration:underline}
+
+/* ---------- bottom action ---------- */
+.fab{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + var(--bot));z-index:25;
+  width:min(528px,calc(100% - 32px));background:var(--ink);color:var(--bg);border:none;border-radius:12px;
+  min-height:52px;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:9px;
+  box-shadow:0 6px 20px -6px rgba(0,0,0,.45)}
+
+/* ---------- sheets ---------- */
+.ov{position:fixed;inset:0;z-index:50;background:var(--scrim);display:flex;align-items:flex-end;
+  justify-content:center;padding-top:var(--top)}
+.ov.mid{align-items:center;padding:18px}
+.sheet{background:var(--surface);width:100%;max-width:560px;border-radius:18px 18px 0 0;
+  padding:20px 16px calc(18px + var(--bot));max-height:100%;overflow-y:auto;overscroll-behavior:contain;
+  animation:up .22s ease-out}
+.ov.mid .sheet{border-radius:16px;padding-bottom:18px;animation:none}
+@keyframes up{from{transform:translateY(16px)}}
+.sheet h2{font-size:19px;font-weight:700}
+.sheet .sub{font-size:14.5px;color:var(--muted);margin-top:6px;line-height:1.45}
+.fld{margin-top:15px}
+.fld > label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--faint);margin-bottom:6px}
+input[type=text],input[type=date],input[type=time],input[type=number]{
+  width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;
+  padding:12px 13px;font:inherit;font-size:16px;color:var(--ink);color-scheme:inherit;min-height:48px}
+input:focus{border-color:var(--accent);outline:none}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pp{display:flex;align-items:center;gap:9px}
+.pp input{text-align:center;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.pp span{font-family:var(--mono);font-size:13px;color:var(--faint);flex:none}
+.btns{display:flex;gap:10px;margin-top:20px}
+.b{flex:1;border-radius:10px;min-height:50px;font-size:16px;font-weight:600;
+  border:1px solid var(--line-2);background:var(--surface);color:var(--ink)}
+.b.main{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.b.wa{background:var(--ok);color:var(--ok-ink);border-color:transparent}
+.b.bad{background:var(--danger);color:var(--danger-ink);border-color:transparent}
+.b.ghost{flex:0 0 auto;padding-inline:18px;font-weight:500;color:var(--muted)}
+.b[disabled]{opacity:.55}
+.msg{font-size:14px;color:var(--accent);margin-top:12px;min-height:1px}
+.pre{font-family:var(--mono);font-size:13.5px;line-height:1.65;white-space:pre-wrap;background:var(--surface-2);
+  border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-top:14px;color:var(--ink-2);overflow-wrap:anywhere}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(78px + var(--bot));z-index:70;
+  background:var(--ink);color:var(--bg);font-size:14.5px;font-weight:500;padding:10px 17px;border-radius:999px;
+  box-shadow:var(--shadow);max-width:calc(100% - 32px);text-align:center}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="bar"><div class="bar-in">
+    <img class="clublogo" src="data:image/png;base64,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" alt="M Run Club" width="34" height="34" decoding="async">
+    <span class="lockup-rule" aria-hidden="true"></span>
+    <div class="brand">Skrien<em>am</em></div>
+    <button class="you" id="you" hidden><span class="av" id="you-av"></span><span class="nm" id="you-nm"></span></button>
+  </div></div>
+  <main>
+    <p class="kicker">Kurš ko skrien šonedēļ</p>
+    <div id="warn"></div>
+    <div id="list"><div class="skel"></div><div class="skel"></div></div>
+  </main>
+</div>
+<button class="fab" id="fab">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+  Pievienot skrējienu
+</button>
+<div id="ovslot"></div>
+<script src="config.js"></script>
+<script>
+"use strict";
+const DIENAS = ["Svētdiena","Pirmdiena","Otrdiena","Trešdiena","Ceturtdiena","Piektdiena","Sestdiena"];
+const MEN = ["jan.","feb.","mar.","apr.","mai.","jūn.","jūl.","aug.","sep.","okt.","nov.","dec."];
+const CFG = (function(){
+  const c = (typeof window !== "undefined" && window.SKRIENAM) || null;
+  if (!c || typeof c.url !== "string" || typeof c.key !== "string") return null;
+  const url = c.url.trim().replace(/\/+$/,""), key = c.key.trim();
+  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)) return null;  // still a placeholder
+  if (key.length < 40) return null;
+  return {url:url, key:key};
+})();
+const S = {runs:[], me:"", store:null, loaded:false};
+
+const $ = (s,r) => (r||document).querySelector(s);
+const pad = n => String(n).padStart(2,"0");
+const ymd = d => d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
+const newId = () => Math.random().toString(36).slice(2,8);
+
+function lsGet(k){ try{ return localStorage.getItem("skr."+k) || ""; }catch(e){ return ""; } }
+function lsSet(k,v){ try{ localStorage.setItem("skr."+k,v); }catch(e){} }
+
+function fill(root,map){ for (const k in map){ const n = root.querySelector('[data-f="'+k+'"]'); if (n) n.textContent = map[k]; } }
+function dayLabel(iso){
+  const d = new Date(iso+"T00:00"), n = new Date(); n.setHours(0,0,0,0);
+  const diff = Math.round((d-n)/86400000);
+  if (diff === 0) return "Šodien";
+  if (diff === 1) return "Rīt";
+  return DIENAS[d.getDay()] + " · " + d.getDate() + ". " + MEN[d.getMonth()];
+}
+function longDate(iso){
+  const d = new Date(iso+"T00:00");
+  return DIENAS[d.getDay()].toLowerCase() + ", " + d.getDate() + ". " + MEN[d.getMonth()];
+}
+function toast(t){
+  const o = $(".toast"); if (o) o.remove();
+  const e = document.createElement("div"); e.className = "toast"; e.textContent = t;
+  document.body.appendChild(e); setTimeout(() => e.remove(), 2600);
+}
+
+/* ================= storage ================= */
+function loadScript(src){
+  return new Promise((res,rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+}
+function futureOnly(rows){
+  const today = ymd(new Date());
+  return rows.filter(r => r.d >= today).sort((a,b) => (a.d+a.t).localeCompare(b.d+b.t));
+}
+
+async function makeStore(){
+  if (CFG && CFG.url && CFG.key){
+    try{
+      await loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js");
+      const sb = window.supabase.createClient(CFG.url, CFG.key);
+      const norm = r => ({id:r.id, d:r.d, t:String(r.t).slice(0,5), kur:r.kur, km:Number(r.km), p1:r.p1, p2:r.p2, by:r.by_name, kas:r.kas || []});
+      const chk = ({error}) => { if (error) throw new Error(error.message); };
+      return {
+        mode:"supabase",
+        async list(){
+          const res = await sb.from("runs").select("*").gte("d", ymd(new Date())).order("d").order("t");
+          chk(res); return (res.data || []).map(norm);
+        },
+        async add(r){ chk(await sb.from("runs").insert({id:r.id, d:r.d, t:r.t, kur:r.kur, km:r.km, p1:r.p1, p2:r.p2, by_name:r.by, kas:r.kas})); },
+        async join(id,n){ chk(await sb.rpc("join_run",{run_id:id, person:n})); },
+        async leave(id,n){ chk(await sb.rpc("leave_run",{run_id:id, person:n})); },
+        async remove(id,n){ chk(await sb.rpc("delete_run",{run_id:id, person:n})); }
+      };
+    }catch(e){ console.warn("Supabase nav pieejams:", e); }
+  }
+
+  if (window.claude && window.claude.use){
+    try{
+      const db = await window.claude.use("db");
+      if (db){
+        const col = () => db.collection("runs");
+        const read = async id => { const s = await db.doc("runs/"+id).get(); return s.exists ? s.data() : null; };
+        return {
+          mode:"claude",
+          async list(){
+            const snap = await col().get();
+            return futureOnly(snap.docs.map(doc => Object.assign({id:doc.id}, doc.data())));
+          },
+          async add(r){ await col().doc(r.id).set({d:r.d, t:r.t, kur:r.kur, km:r.km, p1:r.p1, p2:r.p2, by:r.by, kas:r.kas}); },
+          async join(id,n){ const b = await read(id); if (!b) return; const k = (b.kas||[]).filter(x => x !== n); k.push(n); await db.doc("runs/"+id).update({kas:k}); },
+          async leave(id,n){ const b = await read(id); if (!b) return; await db.doc("runs/"+id).update({kas:(b.kas||[]).filter(x => x !== n)}); },
+          async remove(id){ await db.doc("runs/"+id).delete(); }
+        };
+      }
+    }catch(e){ console.warn("Claude db nav pieejams:", e); }
+  }
+
+  let mem = [];
+  return {
+    mode:"local",
+    async list(){ return futureOnly(mem.slice()); },
+    async add(r){ mem.push(Object.assign({}, r)); },
+    async join(id,n){ const r = mem.find(x => x.id === id); if (r && r.kas.indexOf(n) < 0) r.kas.push(n); },
+    async leave(id,n){ const r = mem.find(x => x.id === id); if (r) r.kas = r.kas.filter(x => x !== n); },
+    async remove(id){ mem = mem.filter(x => x.id !== id); }
+  };
+}
+
+/* ================= render ================= */
+function renderYou(){
+  const b = $("#you"); b.hidden = !S.me;
+  if (S.me){ $("#you-av").textContent = S.me.trim().charAt(0).toUpperCase(); $("#you-nm").textContent = S.me; }
+}
+function renderWarn(){
+  const box = $("#warn"); box.innerHTML = "";
+  if (!S.store || S.store.mode !== "local") return;
+  const w = document.createElement("div"); w.className = "warn";
+  const b = document.createElement("b"); b.textContent = "Nav savienots. ";
+  const s = document.createElement("span"); s.textContent = "Skrējieni saglabāsies tikai šajā cilnē. Pievieno Supabase datus config.js failā.";
+  const d = document.createElement("div"); d.appendChild(b); d.appendChild(s);
+  w.appendChild(d); box.appendChild(w);
+}
+function renderList(){
+  const list = $("#list");
+  list.innerHTML = "";
+  if (!S.runs.length){
+    const e = document.createElement("div"); e.className = "empty";
+    const b = document.createElement("b"); b.textContent = "Vēl nav neviena skrējiena";
+    const s = document.createElement("span"); s.textContent = "Pievieno pirmo un nosūti to grupā — pārējie varēs pievienoties ar vienu pieskārienu.";
+    e.appendChild(b); e.appendChild(s); list.appendChild(e);
+    return;
+  }
+  S.runs.forEach(r => {
+    const inside = S.me && r.kas.indexOf(S.me) >= 0;
+    const mine = S.me && r.by === S.me;
+    const card = document.createElement("article");
+    card.className = "card"; card.id = "r-" + r.id;
+    card.innerHTML =
+      '<div class="c-top"><span class="c-day" data-f="day"></span><span class="c-time" data-f="time"></span></div>'+
+      '<h2 class="c-kur" data-f="kur"></h2>'+
+      '<div class="c-nums"><span data-f="km"></span><span class="sep">·</span><span data-f="pace"></span><span class="u">min/km</span></div>'+
+      '<div class="c-by" data-f="by"></div>'+
+      '<div class="c-foot">'+
+        '<div class="c-who"><b data-f="wholbl"></b><span class="names"></span></div>'+
+        '<div class="c-acts">'+
+        (mine ? '<button class="act iconbtn del" data-a="del" aria-label="Dzēst skrējienu"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>' : '')+
+        '<button class="act iconbtn" data-a="share" aria-label="Nosūtīt uz WhatsApp"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.5L3 20.5l1.6-5.5A8.4 8.4 0 1 1 21 11.5Z"/></svg></button>'+
+        '<button class="act join'+(inside?" out":"")+'" data-a="join" data-f="joinlbl"></button>'+
+        '</div></div>';
+    fill(card, {
+      day: dayLabel(r.d), time: r.t, kur: r.kur,
+      km: r.km + " km", pace: r.p1 + "–" + r.p2,
+      by: "Pievienoja " + r.by,
+      wholbl: r.kas.length ? "Skrien " + r.kas.length : "",
+      joinlbl: inside ? "Vairs neskrienu" : "Es skrienu"
+    });
+    const names = card.querySelector(".names");
+    if (!r.kas.length) names.textContent = "Vēl neviens neskrien";
+    else r.kas.forEach((n,i) => {
+      if (i) names.appendChild(document.createTextNode(", "));
+      const sp = document.createElement("span");
+      if (S.me && n === S.me) sp.className = "me";
+      sp.textContent = n; names.appendChild(sp);
+    });
+    card.addEventListener("click", e => {
+      const b = e.target.closest("button[data-a]"); if (!b) return;
+      if (b.dataset.a === "join") toggleJoin(r);
+      else if (b.dataset.a === "share") openShare(r);
+      else if (b.dataset.a === "del") confirmDelete(r);
+    });
+    list.appendChild(card);
+  });
+}
+function render(){ renderYou(); renderWarn(); renderList(); }
+
+async function refresh(){
+  try{
+    S.runs = await S.store.list();
+    S.loaded = true;
+    render();
+  }catch(e){
+    if (!S.loaded){
+      const l = $("#list"); l.innerHTML = "";
+      const box = document.createElement("div"); box.className = "empty";
+      const b = document.createElement("b"); b.textContent = "Neizdevās ielādēt";
+      const sp = document.createElement("span"); sp.textContent = "Pārbaudi interneta savienojumu.";
+      const btn = document.createElement("button"); btn.className = "b main";
+      btn.style.cssText = "margin-top:16px;max-width:200px";
+      btn.textContent = "Mēģināt vēlreiz";
+      btn.addEventListener("click", refresh);
+      box.appendChild(b); box.appendChild(sp); box.appendChild(btn); l.appendChild(box);
+    } else toast("Neizdevās atjaunot sarakstu.");
+  }
+}
+
+/* ================= sheets ================= */
+function closeSheet(){ $("#ovslot").innerHTML = ""; }
+function openSheet(html, mid){
+  $("#ovslot").innerHTML = '<div class="ov'+(mid?" mid":"")+'"><div class="sheet">'+html+'</div></div>';
+  const ov = $("#ovslot .ov");
+  ov.addEventListener("click", e => { if (e.target === ov) closeSheet(); });
+}
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
+
+function askName(after){
+  openSheet(
+    '<h2>Kā tevi sauc?</h2>'+
+    '<p class="sub">Lai pārējie zina, kurš nāk. Vārds saglabāsies šajā telefonā.</p>'+
+    '<div class="fld"><input type="text" id="nm" maxlength="30" placeholder="Vārds" autocomplete="name" autocapitalize="words"></div>'+
+    '<div class="msg" id="nmerr"></div>'+
+    '<div class="btns"><button class="b ghost" id="nmx">Atcelt</button><button class="b main" id="nmok">Saglabāt</button></div>', true);
+  const i = $("#nm"); i.value = S.me; setTimeout(() => i.focus(), 60);
+  $("#nmx").addEventListener("click", closeSheet);
+  const go = () => {
+    const v = i.value.trim().replace(/\s+/g," ");
+    if (v.length < 2){ $("#nmerr").textContent = "Ieraksti savu vārdu."; return; }
+    S.me = v; lsSet("vards", v); closeSheet(); render();
+    if (after) after();
+  };
+  $("#nmok").addEventListener("click", go);
+  i.addEventListener("keydown", e => { if (e.key === "Enter") go(); });
+}
+
+async function toggleJoin(r){
+  if (!S.me) return askName(() => toggleJoin(r));
+  const inside = r.kas.indexOf(S.me) >= 0;
+  const before = r.kas.slice();
+  r.kas = inside ? r.kas.filter(x => x !== S.me) : r.kas.concat([S.me]);
+  render();
+  try{
+    if (inside) await S.store.leave(r.id, S.me); else await S.store.join(r.id, S.me);
+    toast(inside ? "Noņemts no saraksta" : "Tu esi sarakstā");
+    refresh();
+  }catch(e){ r.kas = before; render(); toast("Neizdevās. Pamēģini vēlreiz."); }
+}
+
+function runUrl(r){ return location.origin + location.pathname + "#" + r.id; }
+function waText(r){
+  return "🏃 Skrējiens — " + longDate(r.d) + " plkst. " + r.t + "\n"+
+         "📍 " + r.kur + "\n"+
+         r.km + " km · temps " + r.p1 + "–" + r.p2 + " min/km\n\n"+
+         (r.kas.length ? "Skrien: " + r.kas.join(", ") + "\n\n" : "")+
+         "Pievienojies: " + runUrl(r);
+}
+function openShare(r){
+  const text = waText(r);
+  openSheet('<h2>Nosūtīt uz WhatsApp</h2><div class="pre" data-f="msg"></div>'+
+    '<div class="btns"><button class="b" id="cp">Kopēt</button><button class="b wa" id="go">Nosūtīt</button></div>');
+  fill($("#ovslot"), {msg: text});
+  $("#cp").addEventListener("click", async () => {
+    try{ await navigator.clipboard.writeText(text); toast("Nokopēts"); }
+    catch(e){ toast("Nokopēt neizdevās — iezīmē tekstu manuāli."); }
+  });
+  $("#go").addEventListener("click", async () => {
+    if (navigator.share){
+      try{ await navigator.share({text:text}); closeSheet(); return; }
+      catch(e){ if (e && e.name === "AbortError") return; }
+    }
+    const w = window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank", "noopener");
+    if (w) closeSheet(); else toast("Nevarēja atvērt WhatsApp — nokopē tekstu.");
+  });
+}
+
+function confirmDelete(r){
+  openSheet('<h2>Dzēst šo skrējienu?</h2><p class="sub" data-f="what"></p>'+
+    '<div class="btns"><button class="b ghost" id="dx">Atcelt</button><button class="b bad" id="dok">Dzēst</button></div>', true);
+  fill($("#ovslot"), {what: longDate(r.d) + ", " + r.t + " — " + r.kur});
+  $("#dx").addEventListener("click", closeSheet);
+  $("#dok").addEventListener("click", async () => {
+    $("#dok").disabled = true;
+    try{ await S.store.remove(r.id, S.me); closeSheet(); toast("Dzēsts"); refresh(); }
+    catch(e){ $("#dok").disabled = false; toast("Neizdevās izdzēst."); }
+  });
+}
+
+function openForm(){
+  const sat = (() => { const d = new Date(); d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7 || 7)); return ymd(d); })();
+  openSheet(
+    '<h2>Jauns skrējiens</h2>'+
+    '<div class="fld"><label>Kad</label><div class="g2"><input type="date" id="f-d" value="'+sat+'" min="'+ymd(new Date())+'"><input type="time" id="f-t" value="08:00"></div></div>'+
+    '<div class="fld"><label>Kur tiekamies</label><input type="text" id="f-kur" maxlength="80" placeholder="Mežaparks, pie Lielās estrādes" autocapitalize="sentences"></div>'+
+    '<div class="fld"><label>Cik km</label><input type="number" id="f-km" min="1" max="120" step="0.5" inputmode="decimal" placeholder="22"></div>'+
+    '<div class="fld"><label>Temps (min/km)</label><div class="pp">'+
+      '<input type="text" id="f-p1" inputmode="numeric" placeholder="5:00" aria-label="No"><span>līdz</span>'+
+      '<input type="text" id="f-p2" inputmode="numeric" placeholder="5:30" aria-label="Līdz"></div></div>'+
+    '<div class="msg" id="f-err"></div>'+
+    '<div class="btns"><button class="b ghost" id="f-x">Atcelt</button><button class="b main" id="f-ok">Pievienot</button></div>');
+  $("#f-x").addEventListener("click", closeSheet);
+  $("#f-ok").addEventListener("click", () => {
+    const err = $("#f-err"), v = id => $("#f-"+id).value.trim(), pace = /^\d{1,2}:[0-5]\d$/;
+    if (!v("d") || !v("t")){ err.textContent = "Jāizvēlas datums un laiks."; return; }
+    if (!v("kur")){ err.textContent = "Jāieraksta, kur tiekamies."; return; }
+    if (!(parseFloat(v("km")) > 0)){ err.textContent = "Jāieraksta distance."; return; }
+    if (!pace.test(v("p1")) || !pace.test(v("p2"))){ err.textContent = "Tempu raksti kā 5:00."; return; }
+    // Read the fields NOW — asking for a name replaces this sheet and the inputs go away.
+    const run = {id:newId(), d:v("d"), t:v("t"), kur:v("kur"), km:parseFloat(v("km")), p1:v("p1"), p2:v("p2"), by:"", kas:[]};
+    const commit = async () => {
+      run.by = S.me; run.kas = [S.me];
+      try{
+        await S.store.add(run);
+        closeSheet(); await refresh();
+        const c = document.getElementById("r-" + run.id);
+        if (c){ c.scrollIntoView({block:"center", behavior:"smooth"}); c.classList.add("flash"); }
+        setTimeout(() => openShare(run), 420);
+      }catch(e){
+        const btn = $("#f-ok"); if (btn) btn.disabled = false;
+        toast("Neizdevās saglabāt. Pamēģini vēlreiz.");
+      }
+    };
+    if (!S.me){ askName(commit); return; }
+    $("#f-ok").disabled = true;
+    commit();
+  });
+}
+
+/* ================= boot ================= */
+$("#fab").addEventListener("click", openForm);
+$("#you").addEventListener("click", () => askName());
+
+(async function(){
+  S.me = lsGet("vards");
+  renderYou();
+  S.store = await makeStore();
+  await refresh();
+
+  const want = location.hash.replace("#","");
+  if (want){
+    const c = document.getElementById("r-" + want);
+    if (c){ c.scrollIntoView({block:"center"}); c.classList.add("flash"); }
+  }
+
+  setInterval(() => { if (!document.hidden && !$("#ovslot").firstChild) refresh(); }, 30000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
+})();
+</script>
+</body>
+</html>
