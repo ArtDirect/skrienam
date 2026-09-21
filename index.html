@@ -181,7 +181,7 @@ input:focus{border-color:var(--accent);outline:none}
 .b.ghost{flex:0 0 auto;padding-inline:18px;font-weight:500;color:var(--muted)}
 .b[disabled]{opacity:.55}
 .msg{font-size:14px;color:var(--accent);margin-top:12px;min-height:1px}
-.pre{font-family:var(--mono);font-size:13.5px;line-height:1.65;white-space:pre-wrap;background:var(--surface-2);
+.pre{user-select:text;-webkit-user-select:text;font-family:var(--mono);font-size:13.5px;line-height:1.65;white-space:pre-wrap;background:var(--surface-2);
   border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-top:14px;color:var(--ink-2);overflow-wrap:anywhere}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(78px + var(--bot));z-index:70;
   background:var(--ink);color:var(--bg);font-size:14.5px;font-weight:500;padding:10px 17px;border-radius:999px;
@@ -252,9 +252,16 @@ function toast(t){
 function loadScript(src){
   return new Promise((res,rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
 }
+// A run stays listed until three hours after it starts — long enough that a
+// group still out on the road can be seen, short enough that this morning's
+// run is gone by lunchtime.
+const GRACE_MS = 3 * 60 * 60 * 1000;
+function isUpcoming(r){
+  const start = new Date(r.d + "T" + (r.t || "00:00")).getTime();
+  return isFinite(start) ? start + GRACE_MS > Date.now() : true;
+}
 function futureOnly(rows){
-  const today = ymd(new Date());
-  return rows.filter(r => r.d >= today).sort((a,b) => (a.d+a.t).localeCompare(b.d+b.t));
+  return rows.filter(isUpcoming).sort((a,b) => (a.d+a.t).localeCompare(b.d+b.t));
 }
 
 async function makeStore(){
@@ -269,7 +276,7 @@ async function makeStore(){
         mode:"supabase",
         async list(){
           const res = await sb.from("runs").select("*").gte("d", ymd(new Date())).order("d").order("t");
-          chk(res); return (res.data || []).map(norm);
+          chk(res); return futureOnly((res.data || []).map(norm));
         },
         async add(r){ chk(await sb.from("runs").insert({id:r.id, d:r.d, t:r.t, kur:r.kur, km:r.km, p1:r.p1, p2:r.p2, by_name:r.by, kas:r.kas})); },
         async join(id,n){ chk(await sb.rpc("join_run",{run_id:id, person:n})); },
@@ -468,6 +475,44 @@ async function toggleJoin(r){
   }catch(e){ r.kas = before; render(); toast("Neizdevās. Pamēģini vēlreiz."); }
 }
 
+// navigator.clipboard.writeText is refused in plenty of ordinary situations —
+// an unfocused document, older iOS, a standalone PWA webview — so it is only
+// the first of three attempts. The last one selects the text on screen so a
+// long-press still offers Copy.
+async function copyText(text, srcEl){
+  try{
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  }catch(e){}
+  try{
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.cssText = "position:fixed;left:-9999px;top:50%;font-size:16px";
+    document.body.appendChild(ta);
+    const sel = window.getSelection();
+    const saved = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
+    ta.contentEditable = "true"; ta.readOnly = false;          // iOS needs both
+    const range = document.createRange(); range.selectNodeContents(ta);
+    if (sel){ sel.removeAllRanges(); sel.addRange(range); }
+    ta.setSelectionRange(0, text.length);
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    if (sel && saved){ sel.removeAllRanges(); sel.addRange(saved); }
+    if (ok) return true;
+  }catch(e){}
+  if (srcEl){
+    try{
+      const r = document.createRange(); r.selectNodeContents(srcEl);
+      const sel2 = window.getSelection(); sel2.removeAllRanges(); sel2.addRange(r);
+      srcEl.scrollIntoView({block:"center"});
+    }catch(e){}
+  }
+  return false;
+}
+
 function runUrl(r){ return location.origin + location.pathname + "#" + r.id; }
 function waText(r){
   return "🏃 Skrējiens — " + longDate(r.d) + " plkst. " + r.t + "\n"+
@@ -482,8 +527,8 @@ function openShare(r){
     '<div class="btns"><button class="b" id="cp">Kopēt</button><button class="b wa" id="go">Nosūtīt</button></div>');
   fill($("#ovslot"), {msg: text});
   $("#cp").addEventListener("click", async () => {
-    try{ await navigator.clipboard.writeText(text); toast("Nokopēts"); }
-    catch(e){ toast("Nokopēt neizdevās — iezīmē tekstu manuāli."); }
+    const ok = await copyText(text, $("#ovslot .pre"));
+    toast(ok ? "Nokopēts" : "Teksts iezīmēts — turi pirkstu un spied Copy.");
   });
   $("#go").addEventListener("click", async () => {
     if (navigator.share){
