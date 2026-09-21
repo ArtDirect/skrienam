@@ -599,6 +599,7 @@ function maskPace(el){
 // the whole point — its roster: fixing a typo must not cost you the people
 // who already said they are coming.
 function openForm(edit){
+  if (!edit || !edit.id) edit = null;        // a click Event is truthy; a run has an id
   const sat = (() => { const d = new Date(); d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7 || 7)); return ymd(d); })();
   const val = (k, fallback) => edit ? String(edit[k]) : fallback;
   openSheet(
@@ -681,7 +682,7 @@ function openForm(edit){
 }
 
 /* ================= boot ================= */
-$("#fab").addEventListener("click", openForm);
+$("#fab").addEventListener("click", () => openForm());
 $("#you").addEventListener("click", () => askName());
 
 (async function(){
