@@ -305,6 +305,7 @@ async function makeStore(){
         async add(r){ chk(await sb.from("runs").insert({id:r.id, d:r.d, t:r.t, kur:r.kur, km:r.km, p1:r.p1, p2:r.p2, by_name:r.by, kas:r.kas})); },
         async join(id,n){ chk(await sb.rpc("join_run",{run_id:id, person:n})); },
         async leave(id,n){ chk(await sb.rpc("leave_run",{run_id:id, person:n})); },
+        async visit(dev,day){ try{ await sb.from("visits").insert({dev:dev, day:day}); }catch(e){} },
         async renameAuthor(oldN,newN){ chk(await sb.rpc("rename_author",{old_name:oldN, new_name:newN})); },
         async update(r,n){ chk(await sb.rpc("update_run",{run_id:r.id, person:n, new_d:r.d, new_t:r.t, new_kur:r.kur, new_km:r.km, new_p1:r.p1, new_p2:r.p2})); },
         async remove(id,n){ chk(await sb.rpc("delete_run",{run_id:id, person:n})); }
@@ -710,11 +711,26 @@ function openForm(edit){
 $("#fab").addEventListener("click", () => openForm());
 $("#you").addEventListener("click", () => askName());
 
+// Counts an open once per device per day, so a reload is not a visit and a
+// person who checks the board four times on Friday is one person. Random id,
+// no name, no path. Fire and forget: analytics must never delay the board or
+// break it when the request fails.
+function countOpen(){
+  if (!S.store || !S.store.visit) return;      // only the Supabase store counts
+  const today = ymd(new Date());
+  if (lsGet("seen") === today) return;
+  let dev = lsGet("dev");
+  if (!dev){ dev = newId() + newId(); lsSet("dev", dev); }
+  lsSet("seen", today);
+  S.store.visit(dev, today);
+}
+
 (async function(){
   S.me = lsGet("vards");
   renderYou();
   S.store = await makeStore();
   await refresh();
+  countOpen();
 
   const want = location.hash.replace("#","");
   if (want){

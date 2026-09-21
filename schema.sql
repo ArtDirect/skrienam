@@ -80,6 +80,25 @@ grant execute on function public.delete_run(text,text) to anon, authenticated;
 grant execute on function public.update_run(text,text,date,time,text,numeric,text,text) to anon, authenticated;
 grant execute on function public.rename_author(text,text) to anon, authenticated;
 
+/* Opens, counted without cookies and without anything personal: one row per
+   device per day, keyed by a random id the browser invents for itself. No
+   name, no IP, no path, nothing that identifies a person.
+
+   Deliberately insert-only: there is no select policy and no select grant,
+   so nobody using the app can read this table back, including to see who
+   else opened it. You read it in the Supabase dashboard, which bypasses RLS. */
+create table if not exists public.visits (
+  dev text        not null,
+  day date        not null default current_date,
+  at  timestamptz not null default now(),
+  primary key (dev, day)
+);
+
+alter table public.visits enable row level security;
+drop policy if exists "skrienam visit" on public.visits;
+create policy "skrienam visit" on public.visits for insert to anon, authenticated with check (true);
+grant insert on public.visits to anon, authenticated;
+
 /* Optional housekeeping: past runs just stop showing in the app.
    To actually clear them out, run this whenever you like:
      delete from public.runs where d < current_date - 30;  */
