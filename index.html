@@ -215,15 +215,30 @@ input:focus{border-color:var(--accent);outline:none}
 "use strict";
 const DIENAS = ["Svētdiena","Pirmdiena","Otrdiena","Trešdiena","Ceturtdiena","Piektdiena","Sestdiena"];
 const MEN = ["jan.","feb.","mar.","apr.","mai.","jūn.","jūl.","aug.","sep.","okt.","nov.","dec."];
+const S = {runs:[], me:"", store:null, loaded:false, why:null, whyMsg:""};
+// Refuses a secret key outright. This repo is public and config.js is
+// committed, so pasting the service_role key here would publish a key that
+// bypasses every rule in schema.sql — and git history keeps it forever.
+// Both keys sit on the same Supabase page, one click apart.
+function keyIsSecret(key){
+  if (/^sb_secret_/i.test(key)) return true;
+  const part = key.split(".")[1];
+  if (!part) return false;
+  try{
+    const pad = part.replace(/-/g,"+").replace(/_/g,"/");
+    const claims = JSON.parse(atob(pad + "===".slice((pad.length + 3) % 4)));
+    return claims && claims.role && claims.role !== "anon";
+  }catch(e){ return false; }
+}
 const CFG = (function(){
   const c = (typeof window !== "undefined" && window.SKRIENAM) || null;
   if (!c || typeof c.url !== "string" || typeof c.key !== "string") return null;
   const url = c.url.trim().replace(/\/+$/,""), key = c.key.trim();
   if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)) return null;  // still a placeholder
   if (key.length < 40) return null;
+  if (keyIsSecret(key)){ S.why = "secretkey"; return null; }
   return {url:url, key:key};
 })();
-const S = {runs:[], me:"", store:null, loaded:false, why:null, whyMsg:""};
 
 const $ = (s,r) => (r||document).querySelector(s);
 const pad = n => String(n).padStart(2,"0");
@@ -341,7 +356,10 @@ function renderWarn(){
   if (!S.store || S.store.mode !== "local") return;
   const w = document.createElement("div"); w.className = "warn";
   const b = document.createElement("b"); const t = document.createElement("span");
-  if (S.why === "failed"){
+  if (S.why === "secretkey"){
+    b.textContent = "Nepareiza atslēga. ";
+    t.textContent = "config.js failā ir slepenā (service_role) atslēga. Nomaini to pret anon public atslēgu un nomaini slepeno Supabase iestatījumos — tā ir publiskā repozitorijā.";
+  } else if (S.why === "failed"){
     b.textContent = "Savienojums neizdevās. ";
     t.textContent = "Pārbaudi config.js vērtības un vai schema.sql ir palaists Supabase SQL redaktorā." +
                     (S.whyMsg ? " (" + S.whyMsg + ")" : "");
