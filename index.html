@@ -175,6 +175,10 @@ input:focus{border-color:var(--accent);outline:none}
 .pp input{text-align:center;font-family:var(--mono);font-variant-numeric:tabular-nums}
 .pp span{font-family:var(--mono);font-size:13px;color:var(--faint);flex:none}
 .btns{display:flex;gap:10px;margin-top:20px}
+.sheet.hasfoot{padding-bottom:0}
+.sheet-foot{position:sticky;bottom:0;background:var(--surface);
+  padding-bottom:calc(18px + var(--bot));margin-top:20px}
+.sheet-foot .btns{margin-top:0}
 .b{flex:1;border-radius:10px;min-height:50px;font-size:16px;font-weight:600;
   border:1px solid var(--line-2);background:var(--surface);color:var(--ink)}
 .b.main{background:var(--accent);color:var(--accent-ink);border-color:transparent}
@@ -630,8 +634,11 @@ function openForm(edit){
       '<input type="text" id="f-p2" inputmode="numeric" maxlength="5" placeholder="5:30" aria-label="Līdz" value="'+val("p2", "")+'"></div>'+
       '<div class="hint">Raksti tikai ciparus — 530 kļūst par 5:30.</div></div>'+
     '<div class="msg" id="f-err"></div>'+
-    '<div class="btns"><button class="b ghost" id="f-x">Atcelt</button><button class="b main" id="f-ok" data-f="fok"></button></div>'+
-    (edit ? '<button class="b dangerlink" id="f-del">Dzēst skrējienu</button>' : ''));
+    '<div class="sheet-foot">'+
+      '<div class="btns"><button class="b ghost" id="f-x">Atcelt</button><button class="b main" id="f-ok" data-f="fok"></button></div>'+
+      (edit ? '<button class="b dangerlink" id="f-del">Dzēst skrējienu</button>' : '')+
+    '</div>');
+  $("#ovslot .sheet").classList.add("hasfoot");
 
   fill($("#ovslot"), { ftitle: edit ? "Labot skrējienu" : "Jauns skrējiens",
                        fok:    edit ? "Saglabāt"        : "Pievienot" });
