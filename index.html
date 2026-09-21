@@ -144,6 +144,7 @@ main{flex:1;padding:18px 16px calc(96px + var(--bot))}
 .fld{margin-top:15px}
 .fld > label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.11em;text-transform:uppercase;
   color:var(--faint);margin-bottom:6px}
+.fld .hint{font-size:12.5px;color:var(--faint);margin-top:6px}
 input[type=text],input[type=date],input[type=time],input[type=number]{
   width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;
   padding:12px 13px;font:inherit;font-size:16px;color:var(--ink);color-scheme:inherit;min-height:48px}
@@ -200,7 +201,7 @@ const CFG = (function(){
   if (key.length < 40) return null;
   return {url:url, key:key};
 })();
-const S = {runs:[], me:"", store:null, loaded:false};
+const S = {runs:[], me:"", store:null, loaded:false, why:null, whyMsg:""};
 
 const $ = (s,r) => (r||document).querySelector(s);
 const pad = n => String(n).padStart(2,"0");
@@ -238,6 +239,7 @@ function futureOnly(rows){
 }
 
 async function makeStore(){
+  if (!CFG) S.why = "noconfig";
   if (CFG && CFG.url && CFG.key){
     try{
       await loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js");
@@ -255,7 +257,7 @@ async function makeStore(){
         async leave(id,n){ chk(await sb.rpc("leave_run",{run_id:id, person:n})); },
         async remove(id,n){ chk(await sb.rpc("delete_run",{run_id:id, person:n})); }
       };
-    }catch(e){ console.warn("Supabase nav pieejams:", e); }
+    }catch(e){ S.why = "failed"; S.whyMsg = String((e && e.message) || e); console.warn("Supabase:", e); }
   }
 
   if (window.claude && window.claude.use){
@@ -299,9 +301,16 @@ function renderWarn(){
   const box = $("#warn"); box.innerHTML = "";
   if (!S.store || S.store.mode !== "local") return;
   const w = document.createElement("div"); w.className = "warn";
-  const b = document.createElement("b"); b.textContent = "Nav savienots. ";
-  const s = document.createElement("span"); s.textContent = "Skrējieni saglabāsies tikai šajā cilnē. Pievieno Supabase datus config.js failā.";
-  const d = document.createElement("div"); d.appendChild(b); d.appendChild(s);
+  const b = document.createElement("b"); const t = document.createElement("span");
+  if (S.why === "failed"){
+    b.textContent = "Savienojums neizdevās. ";
+    t.textContent = "Pārbaudi config.js vērtības un vai schema.sql ir palaists Supabase SQL redaktorā." +
+                    (S.whyMsg ? " (" + S.whyMsg + ")" : "");
+  } else {
+    b.textContent = "Nav savienots. ";
+    t.textContent = "Skrējieni saglabāsies tikai šajā cilnē. Pievieno Supabase datus config.js failā.";
+  }
+  const d = document.createElement("div"); d.appendChild(b); d.appendChild(t);
   w.appendChild(d); box.appendChild(w);
 }
 function renderList(){
@@ -480,6 +489,17 @@ function confirmDelete(r){
   });
 }
 
+// The phone keypad offers digits and nothing else, so the colon is ours
+// to add: 5 -> "5", 53 -> "53", 530 -> "5:30", 1045 -> "10:45".
+function maskPace(el){
+  const fmt = () => {
+    const d = el.value.replace(/\D/g, "").slice(0, 4);
+    el.value = d.length >= 3 ? d.slice(0, d.length - 2) + ":" + d.slice(-2) : d;
+  };
+  el.addEventListener("input", fmt);
+  el.addEventListener("blur", fmt);
+}
+
 function openForm(){
   const sat = (() => { const d = new Date(); d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7 || 7)); return ymd(d); })();
   openSheet(
@@ -488,10 +508,12 @@ function openForm(){
     '<div class="fld"><label>Kur tiekamies</label><input type="text" id="f-kur" maxlength="80" placeholder="Mežaparks, pie Lielās estrādes" autocapitalize="sentences"></div>'+
     '<div class="fld"><label>Cik km</label><input type="text" id="f-km" inputmode="decimal" maxlength="6" placeholder="22"></div>'+
     '<div class="fld"><label>Temps (min/km)</label><div class="pp">'+
-      '<input type="text" id="f-p1" inputmode="numeric" placeholder="5:00" aria-label="No"><span>līdz</span>'+
-      '<input type="text" id="f-p2" inputmode="numeric" placeholder="5:30" aria-label="Līdz"></div></div>'+
+      '<input type="text" id="f-p1" inputmode="numeric" maxlength="5" placeholder="5:00" aria-label="No"><span>līdz</span>'+
+      '<input type="text" id="f-p2" inputmode="numeric" maxlength="5" placeholder="5:30" aria-label="Līdz"></div>'+
+      '<div class="hint">Raksti tikai ciparus — 530 kļūst par 5:30.</div></div>'+
     '<div class="msg" id="f-err"></div>'+
     '<div class="btns"><button class="b ghost" id="f-x">Atcelt</button><button class="b main" id="f-ok">Pievienot</button></div>');
+  maskPace($("#f-p1")); maskPace($("#f-p2"));
   $("#f-x").addEventListener("click", closeSheet);
   $("#f-ok").addEventListener("click", () => {
     const err = $("#f-err"), v = id => $("#f-"+id).value.trim();

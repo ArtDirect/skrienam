@@ -23,10 +23,10 @@ alter table public.runs enable row level security;
 -- functions below, so nobody can wipe the table straight from the API.
 drop policy if exists "skrienam read"   on public.runs;
 drop policy if exists "skrienam insert" on public.runs;
-create policy "skrienam read"   on public.runs for select to anon using (true);
-create policy "skrienam insert" on public.runs for insert to anon with check (true);
+create policy "skrienam read"   on public.runs for select to anon, authenticated using (true);
+create policy "skrienam insert" on public.runs for insert to anon, authenticated with check (true);
 
-grant select, insert on public.runs to anon;
+grant select, insert on public.runs to anon, authenticated;
 
 -- Join: append the name, never twice. Atomic at the row.
 create or replace function public.join_run(run_id text, person text)
@@ -48,9 +48,9 @@ returns void language sql security definer set search_path = public as $fn$
   delete from public.runs where id = run_id and by_name = person;
 $fn$;
 
-grant execute on function public.join_run(text,text)   to anon;
-grant execute on function public.leave_run(text,text)  to anon;
-grant execute on function public.delete_run(text,text) to anon;
+grant execute on function public.join_run(text,text)   to anon, authenticated;
+grant execute on function public.leave_run(text,text)  to anon, authenticated;
+grant execute on function public.delete_run(text,text) to anon, authenticated;
 
 -- Optional housekeeping: past runs just stop showing in the app.
 -- To actually clear them out, run this whenever you like:
