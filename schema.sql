@@ -55,6 +55,14 @@ returns void language sql security definer set search_path = public as $fn$
    where id = run_id and by_name = person;
 $fn$;
 
+-- Rename: carry authorship with you when you change your display name.
+-- Without this your own runs stay stamped with the old name and you lose the
+-- ability to edit or delete them. Name-matched, same trust model as the rest.
+create or replace function public.rename_author(old_name text, new_name text)
+returns void language sql security definer set search_path = public as $fn$
+  update public.runs set by_name = new_name where by_name = old_name;
+$fn$;
+
 -- Delete: only the person who posted it.
 create or replace function public.delete_run(run_id text, person text)
 returns void language sql security definer set search_path = public as $fn$
@@ -65,6 +73,7 @@ grant execute on function public.join_run(text,text)   to anon, authenticated;
 grant execute on function public.leave_run(text,text)  to anon, authenticated;
 grant execute on function public.delete_run(text,text) to anon, authenticated;
 grant execute on function public.update_run(text,text,date,time,text,numeric,text,text) to anon, authenticated;
+grant execute on function public.rename_author(text,text) to anon, authenticated;
 
 -- Optional housekeeping: past runs just stop showing in the app.
 -- To actually clear them out, run this whenever you like:

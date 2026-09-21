@@ -247,7 +247,9 @@ function longDate(iso){
 }
 function toast(t){
   const o = $(".toast"); if (o) o.remove();
-  const e = document.createElement("div"); e.className = "toast"; e.textContent = t;
+  const e = document.createElement("div"); e.className = "toast";
+  e.setAttribute("role", "status"); e.setAttribute("aria-live", "polite");
+  e.textContent = t;
   document.body.appendChild(e); setTimeout(() => e.remove(), 2600);
 }
 
@@ -284,6 +286,7 @@ async function makeStore(){
         async add(r){ chk(await sb.from("runs").insert({id:r.id, d:r.d, t:r.t, kur:r.kur, km:r.km, p1:r.p1, p2:r.p2, by_name:r.by, kas:r.kas})); },
         async join(id,n){ chk(await sb.rpc("join_run",{run_id:id, person:n})); },
         async leave(id,n){ chk(await sb.rpc("leave_run",{run_id:id, person:n})); },
+        async renameAuthor(oldN,newN){ chk(await sb.rpc("rename_author",{old_name:oldN, new_name:newN})); },
         async update(r,n){ chk(await sb.rpc("update_run",{run_id:r.id, person:n, new_d:r.d, new_t:r.t, new_kur:r.kur, new_km:r.km, new_p1:r.p1, new_p2:r.p2})); },
         async remove(id,n){ chk(await sb.rpc("delete_run",{run_id:id, person:n})); }
       };
@@ -305,6 +308,8 @@ async function makeStore(){
           async add(r){ await col().doc(r.id).set({d:r.d, t:r.t, kur:r.kur, km:r.km, p1:r.p1, p2:r.p2, by:r.by, kas:r.kas}); },
           async join(id,n){ const b = await read(id); if (!b) return; const k = (b.kas||[]).filter(x => x !== n); k.push(n); await db.doc("runs/"+id).update({kas:k}); },
           async leave(id,n){ const b = await read(id); if (!b) return; await db.doc("runs/"+id).update({kas:(b.kas||[]).filter(x => x !== n)}); },
+          async renameAuthor(oldN,newN){ const snap = await col().get();
+            for (const doc of snap.docs) if (doc.data().by === oldN) await db.doc("runs/"+doc.id).update({by:newN}); },
           async update(r){ await db.doc("runs/"+r.id).update({d:r.d, t:r.t, kur:r.kur, km:r.km, p1:r.p1, p2:r.p2}); },
           async remove(id){ await db.doc("runs/"+id).delete(); }
         };
@@ -319,6 +324,7 @@ async function makeStore(){
     async add(r){ mem.push(Object.assign({}, r)); },
     async join(id,n){ const r = mem.find(x => x.id === id); if (r && r.kas.indexOf(n) < 0) r.kas.push(n); },
     async leave(id,n){ const r = mem.find(x => x.id === id); if (r) r.kas = r.kas.filter(x => x !== n); },
+    async renameAuthor(oldN,newN){ mem.forEach(m => { if (m.by === oldN) m.by = newN; }); },
     async update(r){ const x = mem.find(m => m.id === r.id);
       if (x) Object.assign(x, {d:r.d, t:r.t, kur:r.kur, km:r.km, p1:r.p1, p2:r.p2}); },
     async remove(id){ mem = mem.filter(x => x.id !== id); }
@@ -424,10 +430,24 @@ function lockScroll(on){
   document.documentElement.classList.toggle("locked", on);
   document.body.classList.toggle("locked", on);
 }
-function closeSheet(){ $("#ovslot").innerHTML = ""; lockScroll(false); }
+let lastFocus = null;
+function closeSheet(){
+  $("#ovslot").innerHTML = ""; lockScroll(false);
+  if (lastFocus && document.contains(lastFocus)){ try{ lastFocus.focus(); }catch(e){} }
+  lastFocus = null;
+}
 function openSheet(html, mid){
-  $("#ovslot").innerHTML = '<div class="ov'+(mid?" mid":"")+'"><div class="sheet">'+html+'</div></div>';
+  lastFocus = document.activeElement;
+  $("#ovslot").innerHTML = '<div class="ov'+(mid?" mid":"")+'" role="dialog" aria-modal="true">'+
+    '<div class="sheet" tabindex="-1">'+html+'</div></div>';
   lockScroll(true);
+  // Without this the keyboard stays behind the scrim and a screen reader never
+  // reaches the sheet it just opened.
+  const sheet = $("#ovslot .sheet");
+  const h2 = sheet.querySelector("h2");
+  if (h2){ h2.id = h2.id || "sheet-title"; $("#ovslot .ov").setAttribute("aria-labelledby", h2.id); }
+  setTimeout(() => { const f = sheet.querySelector("input, textarea, button.b.main") || sheet;
+                     try{ f.focus({preventScroll:true}); }catch(e){ try{ f.focus(); }catch(e2){} } }, 40);
   const ov = $("#ovslot .ov");
   ov.addEventListener("click", e => { if (e.target === ov) closeSheet(); });
 }
@@ -458,12 +478,16 @@ function askName(after){
 // name is stranded there and you cannot take yourself off the list.
 async function renameInRuns(oldName, newName){
   const mine = S.runs.filter(r => r.kas.indexOf(oldName) >= 0);
-  if (!mine.length) return;
+  const authored = S.runs.some(r => r.by === oldName);
+  if (!mine.length && !authored) return;
   try{
     for (const r of mine){
       await S.store.leave(r.id, oldName);
       await S.store.join(r.id, newName);
     }
+    // Authorship too, or your own runs keep the old name and you lose the
+    // edit and delete controls on them for good.
+    if (authored && S.store.renameAuthor) await S.store.renameAuthor(oldName, newName);
     toast("Vārds nomainīts arī sarakstos");
   }catch(e){ toast("Vārdu neizdevās nomainīt visos sarakstos."); }
   refresh();
@@ -607,9 +631,11 @@ function openForm(edit){
     if (!v("kur")){ err.textContent = "Jāieraksta, kur tiekamies."; return; }
     if (!(km > 0) || km > 200){ err.textContent = "Jāieraksta distance, piemēram 22 vai 22,5."; return; }
     if (!paceOk(p1) || !paceOk(p2)){ err.textContent = "Tempu raksti kā 5:00."; return; }
+    const secs = x => { const [m,sec] = x.split(":").map(Number); return m*60+sec; };
+    const [pa, pb] = secs(p1) <= secs(p2) ? [p1, p2] : [p2, p1];   // a range is a range
 
     // Read the fields NOW — asking for a name replaces this sheet and the inputs go away.
-    const fields = {d:v("d"), t:v("t"), kur:v("kur"), km:Math.round(km*10)/10, p1:p1, p2:p2};
+    const fields = {d:v("d"), t:v("t"), kur:v("kur"), km:Math.round(km*10)/10, p1:pa, p2:pb};
 
     if (edit){
       $("#f-ok").disabled = true;
