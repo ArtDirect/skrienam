@@ -181,6 +181,7 @@ input:focus{border-color:var(--accent);outline:none}
 .b.wa{background:var(--ok);color:var(--ok-ink);border-color:transparent}
 .b.bad{background:var(--danger);color:var(--danger-ink);border-color:transparent}
 .b.ghost{flex:0 0 auto;padding-inline:18px;font-weight:500;color:var(--muted)}
+.b.dangerlink{width:100%;margin-top:14px;background:none;border:none;color:var(--danger);font-weight:500;font-size:15px;min-height:44px}
 .b[disabled]{opacity:.55}
 .msg{font-size:14px;color:var(--accent);margin-top:12px;min-height:1px}
 .pre{user-select:text;-webkit-user-select:text;font-family:var(--mono);font-size:13.5px;line-height:1.65;white-space:pre-wrap;background:var(--surface-2);
@@ -283,6 +284,7 @@ async function makeStore(){
         async add(r){ chk(await sb.from("runs").insert({id:r.id, d:r.d, t:r.t, kur:r.kur, km:r.km, p1:r.p1, p2:r.p2, by_name:r.by, kas:r.kas})); },
         async join(id,n){ chk(await sb.rpc("join_run",{run_id:id, person:n})); },
         async leave(id,n){ chk(await sb.rpc("leave_run",{run_id:id, person:n})); },
+        async update(r,n){ chk(await sb.rpc("update_run",{run_id:r.id, person:n, new_d:r.d, new_t:r.t, new_kur:r.kur, new_km:r.km, new_p1:r.p1, new_p2:r.p2})); },
         async remove(id,n){ chk(await sb.rpc("delete_run",{run_id:id, person:n})); }
       };
     }catch(e){ S.why = "failed"; S.whyMsg = String((e && e.message) || e); console.warn("Supabase:", e); }
@@ -303,6 +305,7 @@ async function makeStore(){
           async add(r){ await col().doc(r.id).set({d:r.d, t:r.t, kur:r.kur, km:r.km, p1:r.p1, p2:r.p2, by:r.by, kas:r.kas}); },
           async join(id,n){ const b = await read(id); if (!b) return; const k = (b.kas||[]).filter(x => x !== n); k.push(n); await db.doc("runs/"+id).update({kas:k}); },
           async leave(id,n){ const b = await read(id); if (!b) return; await db.doc("runs/"+id).update({kas:(b.kas||[]).filter(x => x !== n)}); },
+          async update(r){ await db.doc("runs/"+r.id).update({d:r.d, t:r.t, kur:r.kur, km:r.km, p1:r.p1, p2:r.p2}); },
           async remove(id){ await db.doc("runs/"+id).delete(); }
         };
       }
@@ -316,6 +319,8 @@ async function makeStore(){
     async add(r){ mem.push(Object.assign({}, r)); },
     async join(id,n){ const r = mem.find(x => x.id === id); if (r && r.kas.indexOf(n) < 0) r.kas.push(n); },
     async leave(id,n){ const r = mem.find(x => x.id === id); if (r) r.kas = r.kas.filter(x => x !== n); },
+    async update(r){ const x = mem.find(m => m.id === r.id);
+      if (x) Object.assign(x, {d:r.d, t:r.t, kur:r.kur, km:r.km, p1:r.p1, p2:r.p2}); },
     async remove(id){ mem = mem.filter(x => x.id !== id); }
   };
 }
@@ -364,7 +369,7 @@ function renderList(){
       '<div class="c-foot">'+
         '<div class="c-who"><b data-f="wholbl"></b><span class="names"></span></div>'+
         '<div class="c-acts">'+
-        (mine ? '<button class="act iconbtn del" data-a="del" aria-label="Dzēst skrējienu"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>' : '')+
+        (mine ? '<button class="act iconbtn" data-a="edit" aria-label="Labot skrējienu"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>' : '')+
         '<button class="act iconbtn" data-a="share" aria-label="Nosūtīt uz WhatsApp"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.5L3 20.5l1.6-5.5A8.4 8.4 0 1 1 21 11.5Z"/></svg></button>'+
         '<button class="act join'+(inside?" out":"")+'" data-a="join" data-f="joinlbl"></button>'+
         '</div></div>';
@@ -387,7 +392,7 @@ function renderList(){
       const b = e.target.closest("button[data-a]"); if (!b) return;
       if (b.dataset.a === "join") toggleJoin(r);
       else if (b.dataset.a === "share") openShare(r);
-      else if (b.dataset.a === "del") confirmDelete(r);
+      else if (b.dataset.a === "edit") openForm(r);
     });
     list.appendChild(card);
   });
@@ -543,11 +548,11 @@ function openShare(r){
   });
 }
 
-function confirmDelete(r){
+function confirmDelete(r, back){
   openSheet('<h2>Dzēst šo skrējienu?</h2><p class="sub" data-f="what"></p>'+
     '<div class="btns"><button class="b ghost" id="dx">Atcelt</button><button class="b bad" id="dok">Dzēst</button></div>', true);
   fill($("#ovslot"), {what: longDate(r.d) + ", " + r.t + " — " + r.kur});
-  $("#dx").addEventListener("click", closeSheet);
+  $("#dx").addEventListener("click", () => { closeSheet(); if (back) back(); });
   $("#dok").addEventListener("click", async () => {
     $("#dok").disabled = true;
     try{ await S.store.remove(r.id, S.me); closeSheet(); toast("Dzēsts"); refresh(); }
@@ -566,21 +571,33 @@ function maskPace(el){
   el.addEventListener("blur", fmt);
 }
 
-function openForm(){
+// One sheet serves both jobs. Editing keeps the run's id, its author and —
+// the whole point — its roster: fixing a typo must not cost you the people
+// who already said they are coming.
+function openForm(edit){
   const sat = (() => { const d = new Date(); d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7 || 7)); return ymd(d); })();
+  const val = (k, fallback) => edit ? String(edit[k]) : fallback;
   openSheet(
-    '<h2>Jauns skrējiens</h2>'+
-    '<div class="fld"><label>Kad</label><div class="g2"><input type="date" id="f-d" value="'+sat+'" min="'+ymd(new Date())+'"><input type="time" id="f-t" value="08:00"></div></div>'+
+    '<h2 data-f="ftitle"></h2>'+
+    '<div class="fld"><label>Kad</label><div class="g2"><input type="date" id="f-d" value="'+val("d", sat)+'" min="'+ymd(new Date())+'"><input type="time" id="f-t" value="'+val("t", "08:00")+'"></div></div>'+
     '<div class="fld"><label>Kur tiekamies</label><input type="text" id="f-kur" maxlength="80" placeholder="Mežaparks, pie Lielās estrādes" autocapitalize="sentences"></div>'+
-    '<div class="fld"><label>Cik km</label><input type="text" id="f-km" inputmode="decimal" maxlength="6" placeholder="22"></div>'+
+    '<div class="fld"><label>Cik km</label><input type="text" id="f-km" inputmode="decimal" maxlength="6" placeholder="22" value="'+(edit ? String(edit.km).replace(".", ",") : "")+'"></div>'+
     '<div class="fld"><label>Temps (min/km)</label><div class="pp">'+
-      '<input type="text" id="f-p1" inputmode="numeric" maxlength="5" placeholder="5:00" aria-label="No"><span>līdz</span>'+
-      '<input type="text" id="f-p2" inputmode="numeric" maxlength="5" placeholder="5:30" aria-label="Līdz"></div>'+
+      '<input type="text" id="f-p1" inputmode="numeric" maxlength="5" placeholder="5:00" aria-label="No" value="'+val("p1", "")+'"><span>līdz</span>'+
+      '<input type="text" id="f-p2" inputmode="numeric" maxlength="5" placeholder="5:30" aria-label="Līdz" value="'+val("p2", "")+'"></div>'+
       '<div class="hint">Raksti tikai ciparus — 530 kļūst par 5:30.</div></div>'+
     '<div class="msg" id="f-err"></div>'+
-    '<div class="btns"><button class="b ghost" id="f-x">Atcelt</button><button class="b main" id="f-ok">Pievienot</button></div>');
+    '<div class="btns"><button class="b ghost" id="f-x">Atcelt</button><button class="b main" id="f-ok" data-f="fok"></button></div>'+
+    (edit ? '<button class="b dangerlink" id="f-del">Dzēst skrējienu</button>' : ''));
+
+  fill($("#ovslot"), { ftitle: edit ? "Labot skrējienu" : "Jauns skrējiens",
+                       fok:    edit ? "Saglabāt"        : "Pievienot" });
+  if (edit) $("#f-kur").value = edit.kur;          // textContent-safe: never interpolated into HTML
+
   maskPace($("#f-p1")); maskPace($("#f-p2"));
   $("#f-x").addEventListener("click", closeSheet);
+  if (edit) $("#f-del").addEventListener("click", () => confirmDelete(edit, () => openForm(edit)));
+
   $("#f-ok").addEventListener("click", () => {
     const err = $("#f-err"), v = id => $("#f-"+id).value.trim();
     const km = parseFloat(v("km").replace(",", ".").replace(/\s/g, ""));
@@ -590,8 +607,34 @@ function openForm(){
     if (!v("kur")){ err.textContent = "Jāieraksta, kur tiekamies."; return; }
     if (!(km > 0) || km > 200){ err.textContent = "Jāieraksta distance, piemēram 22 vai 22,5."; return; }
     if (!paceOk(p1) || !paceOk(p2)){ err.textContent = "Tempu raksti kā 5:00."; return; }
+
     // Read the fields NOW — asking for a name replaces this sheet and the inputs go away.
-    const run = {id:newId(), d:v("d"), t:v("t"), kur:v("kur"), km:Math.round(km*10)/10, p1:p1, p2:p2, by:"", kas:[]};
+    const fields = {d:v("d"), t:v("t"), kur:v("kur"), km:Math.round(km*10)/10, p1:p1, p2:p2};
+
+    if (edit){
+      $("#f-ok").disabled = true;
+      (async () => {
+        const before = {d:edit.d, t:edit.t, kur:edit.kur, km:edit.km, p1:edit.p1, p2:edit.p2};
+        Object.assign(edit, fields);
+        try{
+          await S.store.update(edit, S.me);
+          closeSheet(); await refresh();
+          const c = document.getElementById("r-" + edit.id);
+          if (c){ c.scrollIntoView({block:"center", behavior:"smooth"}); c.classList.add("flash"); }
+          toast("Saglabāts");
+          // Others are already signed up — they need to hear that it moved.
+          const others = (edit.kas || []).filter(n => n !== S.me).length;
+          if (others) setTimeout(() => openShare(edit), 700);
+        }catch(e){
+          Object.assign(edit, before); render();
+          const btn = $("#f-ok"); if (btn) btn.disabled = false;
+          toast("Neizdevās saglabāt. Pamēģini vēlreiz.");
+        }
+      })();
+      return;
+    }
+
+    const run = Object.assign({id:newId(), by:"", kas:[]}, fields);
     const commit = async () => {
       run.by = S.me; run.kas = [S.me];
       try{
