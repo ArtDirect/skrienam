@@ -138,8 +138,9 @@ main{flex:1;padding:18px 16px calc(96px + var(--bot))}
 .skel{height:132px;border-radius:14px;background:var(--surface);border:1px solid var(--line);
   margin-bottom:12px;opacity:.6;animation:pulse 1.4s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.3}}
-.warn{display:flex;gap:10px;background:var(--surface);border:1px solid var(--line);
-  border-left:3px solid var(--accent);border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:14px;color:var(--muted)}
+.warn{display:flex;gap:10px;background:var(--accent-soft);
+  border:1px solid color-mix(in srgb,var(--accent) 24%,transparent);
+  border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:14px;color:var(--ink-2)}
 .warn b{color:var(--ink);font-weight:600}
 .warn button{background:none;border:none;color:var(--accent);font-weight:600;padding:0;text-decoration:underline}
 
