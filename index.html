@@ -181,6 +181,7 @@ input:focus{border-color:var(--accent);outline:none}
 .b.wa{background:var(--ok);color:var(--ok-ink);border-color:transparent}
 .b.bad{background:var(--danger);color:var(--danger-ink);border-color:transparent}
 .b.ghost{flex:0 0 auto;padding-inline:18px;font-weight:500;color:var(--muted)}
+.b.wide{width:100%;margin-top:12px}
 .b.dangerlink{width:100%;margin-top:14px;background:none;border:none;color:var(--danger);font-weight:500;font-size:15px;min-height:44px}
 .b[disabled]{opacity:.55}
 .msg{font-size:14px;color:var(--accent);margin-top:12px;min-height:1px}
@@ -598,6 +599,31 @@ function maskPace(el){
 // One sheet serves both jobs. Editing keeps the run's id, its author and —
 // the whole point — its roster: fixing a typo must not cost you the people
 // who already said they are coming.
+// Posting is the load-bearing action and the expensive one: joining costs a
+// tap, posting costs a form, and the board dies the week the organiser is busy.
+// This puts next week up in one tap, and keeps the board a week ahead instead
+// of empty.
+async function repeatNextWeek(src){
+  const d = new Date(src.d + "T00:00");
+  d.setDate(d.getDate() + 7);
+  const when = ymd(d);
+  const dupe = S.runs.some(r => r.d === when && r.t === src.t && r.kur === src.kur);
+  if (dupe){ closeSheet(); toast("Tāds skrējiens jau ir sarakstā."); return; }
+  const btn = $("#f-rep"); if (btn) btn.disabled = true;
+  const run = {id:newId(), d:when, t:src.t, kur:src.kur, km:src.km,
+               p1:src.p1, p2:src.p2, by:S.me, kas:[S.me]};
+  try{
+    await S.store.add(run);
+    closeSheet(); await refresh();
+    const c = document.getElementById("r-" + run.id);
+    if (c){ c.scrollIntoView({block:"center", behavior:"smooth"}); c.classList.add("flash"); }
+    setTimeout(() => openShare(run), 420);
+  }catch(e){
+    if (btn) btn.disabled = false;
+    toast("Neizdevās. Pamēģini vēlreiz.");
+  }
+}
+
 function openForm(edit){
   const sat = (() => { const d = new Date(); d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7 || 7)); return ymd(d); })();
   const val = (k, fallback) => edit ? String(edit[k]) : fallback;
@@ -612,7 +638,8 @@ function openForm(edit){
       '<div class="hint">Raksti tikai ciparus — 530 kļūst par 5:30.</div></div>'+
     '<div class="msg" id="f-err"></div>'+
     '<div class="btns"><button class="b ghost" id="f-x">Atcelt</button><button class="b main" id="f-ok" data-f="fok"></button></div>'+
-    (edit ? '<button class="b dangerlink" id="f-del">Dzēst skrējienu</button>' : ''));
+    (edit ? '<button class="b wide" id="f-rep">Atkārtot nākamnedēļ</button>'+
+            '<button class="b dangerlink" id="f-del">Dzēst skrējienu</button>' : ''));
 
   fill($("#ovslot"), { ftitle: edit ? "Labot skrējienu" : "Jauns skrējiens",
                        fok:    edit ? "Saglabāt"        : "Pievienot" });
@@ -621,6 +648,7 @@ function openForm(edit){
   maskPace($("#f-p1")); maskPace($("#f-p2"));
   $("#f-x").addEventListener("click", closeSheet);
   if (edit) $("#f-del").addEventListener("click", () => confirmDelete(edit, () => openForm(edit)));
+  if (edit) $("#f-rep").addEventListener("click", () => repeatNextWeek(edit));
 
   $("#f-ok").addEventListener("click", () => {
     const err = $("#f-err"), v = id => $("#f-"+id).value.trim();
