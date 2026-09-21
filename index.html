@@ -59,6 +59,7 @@ p{margin:0}
 button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 img{max-width:100%}
 [hidden]{display:none!important}
+.locked{overflow:hidden!important}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 
@@ -130,7 +131,7 @@ main{flex:1;padding:18px 16px calc(96px + var(--bot))}
   box-shadow:0 6px 20px -6px rgba(0,0,0,.45)}
 
 /* ---------- sheets ---------- */
-.ov{position:fixed;inset:0;z-index:50;background:var(--scrim);display:flex;align-items:flex-end;
+.ov{position:fixed;inset:0;height:100dvh;z-index:50;background:var(--scrim);display:flex;align-items:flex-end;
   justify-content:center;padding-top:var(--top)}
 .ov.mid{align-items:center;padding:18px}
 .sheet{background:var(--surface);width:100%;max-width:560px;border-radius:18px 18px 0 0;
@@ -377,9 +378,14 @@ async function refresh(){
 }
 
 /* ================= sheets ================= */
-function closeSheet(){ $("#ovslot").innerHTML = ""; }
+function lockScroll(on){
+  document.documentElement.classList.toggle("locked", on);
+  document.body.classList.toggle("locked", on);
+}
+function closeSheet(){ $("#ovslot").innerHTML = ""; lockScroll(false); }
 function openSheet(html, mid){
   $("#ovslot").innerHTML = '<div class="ov'+(mid?" mid":"")+'"><div class="sheet">'+html+'</div></div>';
+  lockScroll(true);
   const ov = $("#ovslot .ov");
   ov.addEventListener("click", e => { if (e.target === ov) closeSheet(); });
 }
@@ -397,11 +403,28 @@ function askName(after){
   const go = () => {
     const v = i.value.trim().replace(/\s+/g," ");
     if (v.length < 2){ $("#nmerr").textContent = "Ieraksti savu vārdu."; return; }
+    const old = S.me;
     S.me = v; lsSet("vards", v); closeSheet(); render();
+    if (old && old !== v) renameInRuns(old, v);
     if (after) after();
   };
   $("#nmok").addEventListener("click", go);
   i.addEventListener("keydown", e => { if (e.key === "Enter") go(); });
+}
+
+// A rename has to follow you onto the runs you already joined, or the old
+// name is stranded there and you cannot take yourself off the list.
+async function renameInRuns(oldName, newName){
+  const mine = S.runs.filter(r => r.kas.indexOf(oldName) >= 0);
+  if (!mine.length) return;
+  try{
+    for (const r of mine){
+      await S.store.leave(r.id, oldName);
+      await S.store.join(r.id, newName);
+    }
+    toast("Vārds nomainīts arī sarakstos");
+  }catch(e){ toast("Vārdu neizdevās nomainīt visos sarakstos."); }
+  refresh();
 }
 
 async function toggleJoin(r){
@@ -439,8 +462,9 @@ function openShare(r){
       try{ await navigator.share({text:text}); closeSheet(); return; }
       catch(e){ if (e && e.name === "AbortError") return; }
     }
-    const w = window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank", "noopener");
-    if (w) closeSheet(); else toast("Nevarēja atvērt WhatsApp — nokopē tekstu.");
+    const w = window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+    if (w){ try{ w.opener = null; }catch(err){} closeSheet(); }
+    else toast("Nevarēja atvērt WhatsApp — nokopē tekstu.");
   });
 }
 
@@ -462,7 +486,7 @@ function openForm(){
     '<h2>Jauns skrējiens</h2>'+
     '<div class="fld"><label>Kad</label><div class="g2"><input type="date" id="f-d" value="'+sat+'" min="'+ymd(new Date())+'"><input type="time" id="f-t" value="08:00"></div></div>'+
     '<div class="fld"><label>Kur tiekamies</label><input type="text" id="f-kur" maxlength="80" placeholder="Mežaparks, pie Lielās estrādes" autocapitalize="sentences"></div>'+
-    '<div class="fld"><label>Cik km</label><input type="number" id="f-km" min="1" max="120" step="0.5" inputmode="decimal" placeholder="22"></div>'+
+    '<div class="fld"><label>Cik km</label><input type="text" id="f-km" inputmode="decimal" maxlength="6" placeholder="22"></div>'+
     '<div class="fld"><label>Temps (min/km)</label><div class="pp">'+
       '<input type="text" id="f-p1" inputmode="numeric" placeholder="5:00" aria-label="No"><span>līdz</span>'+
       '<input type="text" id="f-p2" inputmode="numeric" placeholder="5:30" aria-label="Līdz"></div></div>'+
@@ -470,13 +494,16 @@ function openForm(){
     '<div class="btns"><button class="b ghost" id="f-x">Atcelt</button><button class="b main" id="f-ok">Pievienot</button></div>');
   $("#f-x").addEventListener("click", closeSheet);
   $("#f-ok").addEventListener("click", () => {
-    const err = $("#f-err"), v = id => $("#f-"+id).value.trim(), pace = /^\d{1,2}:[0-5]\d$/;
+    const err = $("#f-err"), v = id => $("#f-"+id).value.trim();
+    const km = parseFloat(v("km").replace(",", ".").replace(/\s/g, ""));
+    const p1 = v("p1").replace(/[.,\s]/g, ":"), p2 = v("p2").replace(/[.,\s]/g, ":");
+    const paceOk = x => /^\d{1,2}:[0-5]\d$/.test(x);
     if (!v("d") || !v("t")){ err.textContent = "Jāizvēlas datums un laiks."; return; }
     if (!v("kur")){ err.textContent = "Jāieraksta, kur tiekamies."; return; }
-    if (!(parseFloat(v("km")) > 0)){ err.textContent = "Jāieraksta distance."; return; }
-    if (!pace.test(v("p1")) || !pace.test(v("p2"))){ err.textContent = "Tempu raksti kā 5:00."; return; }
+    if (!(km > 0) || km > 200){ err.textContent = "Jāieraksta distance, piemēram 22 vai 22,5."; return; }
+    if (!paceOk(p1) || !paceOk(p2)){ err.textContent = "Tempu raksti kā 5:00."; return; }
     // Read the fields NOW — asking for a name replaces this sheet and the inputs go away.
-    const run = {id:newId(), d:v("d"), t:v("t"), kur:v("kur"), km:parseFloat(v("km")), p1:v("p1"), p2:v("p2"), by:"", kas:[]};
+    const run = {id:newId(), d:v("d"), t:v("t"), kur:v("kur"), km:Math.round(km*10)/10, p1:p1, p2:p2, by:"", kas:[]};
     const commit = async () => {
       run.by = S.me; run.kas = [S.me];
       try{
